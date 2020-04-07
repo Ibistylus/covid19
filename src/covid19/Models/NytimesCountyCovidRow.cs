@@ -14,5 +14,6 @@ namespace covid19.Services.Models
         public int? Deaths { get; set; }
         
         public decimal? CasesPercentChange { get; set; }
+        public decimal? DeathPercentChange { get; set; }
     }
 }

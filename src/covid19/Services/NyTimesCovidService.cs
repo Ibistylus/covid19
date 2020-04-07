@@ -119,10 +119,11 @@ namespace covid19.Services.Services
         {
             decimal percentChange = 0;
             int? prevCases = 0;
+            int? prevDeaths = 0;
             string prevCounty = string.Empty;
             string prevState = string.Empty;
 
-            var enrichedData = parsedData 
+            var enrichedData = parsedData
                 .OrderBy(o => o.State)
                 .ThenBy(o => o.County)
                 .ThenBy(o => o.Date)
@@ -137,16 +138,42 @@ namespace covid19.Services.Services
                 {
                     prevState = covidRow.State;
                     prevCounty = covidRow.County;
+
                     prevCases = covidRow.Cases;
+                    prevDeaths = covidRow.Deaths;
+
                     covidRow.CasesPercentChange = Decimal.Zero;
+                    covidRow.DeathPercentChange = Decimal.Zero;
+
+                    continue;
                 }
 
                 try
                 {
-                    covidRow.CasesPercentChange =
-                        CovidCountyAggregator.PercenChange((decimal) prevCases, (decimal) covidRow.Cases );
+                    if (prevDeaths > 0)
+                    {
+                        covidRow.DeathPercentChange =
+                            CovidCountyAggregator.PercenChange((decimal) prevDeaths, (decimal) covidRow.Deaths);
+                    }
+                    else
+                    {
+                        covidRow.DeathPercentChange = Decimal.Zero;
+                    }
 
+                    if (prevCases > 0)
+                    {
+                        covidRow.CasesPercentChange =
+                            CovidCountyAggregator.PercenChange((decimal) prevCases, (decimal) covidRow.Cases);
+                    }
+                    else
+                    {
+                        covidRow.CasesPercentChange = Decimal.Zero;
+                    }
+
+                    prevDeaths = covidRow.Deaths;
                     prevCases = covidRow.Cases;
+                    prevCounty = covidRow.County;
+                    prevState = covidRow.State;
                 }
                 catch (Exception e)
                 {
