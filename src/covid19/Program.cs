@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Octokit;
 using System.Net.Http;
+using covid19.Services.DataProvider;
 using Serilog;
 using Serilog.Core;
 
@@ -26,14 +27,18 @@ namespace covid19.Services
             ConfigureServices(serviceCollection, args);
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
-            var configurationOptions = serviceProvider.GetService<IOptions<AppSettings>>();
+            // var nyTimesCovidService = serviceProvider.GetService<INyTimesCovidService>();
+            var nyTimesCovidDataProvider= serviceProvider.GetService<INyTimesCovidDataProvider>();
+            nyTimesCovidDataProvider.Run(false);
+            
 
-            var NyTimesService = serviceProvider.GetService<INyTimesCovidService>();
-            var resultsDekalb = serviceProvider.GetService<INyTimesCovidService>()
-                .GetNyTimesCountyCovidDataByCounty("georgia", "dekalb");
-            var resultsCobb = serviceProvider.GetService<INyTimesCovidService>()
-                            .GetNyTimesCountyCovidDataByCounty("georgia", "cobb");
-                        
+            
+            //            var resultsDekalb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "dekalb");
+            //            var resultsCobb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "cobb");
+
+            //            var gitHubClient = serviceProvider.GetService<IOctoKitGitHubClient>();
+            //            var dlurl = gitHubClient.GetLatestCheckinDateForCovidData().Result;
+
             return 1;
         }
 
@@ -51,11 +56,14 @@ namespace covid19.Services
 
             serviceCollection.AddSingleton(typeof(ILogger), Log.Logger);
 
-            serviceCollection.AddOptions()
+            serviceCollection
+                .AddOptions()
                 .Configure<AppSettings>(config.GetSection("Configuration"))
                 .AddSingleton(config)
-                .AddSingleton<Services.INyTimesCovidService, Services.NyTimesCovidService>()
-                .AddSingleton<IOctoKitGitHubClient, OctoKitGitHubClient>();
+                .AddSingleton<IOctoKitGitHubClient, OctoKitGitHubClient>()
+                .AddSingleton<INyTimesCovidDataProvider, NyTimesCovidDataProvider>()
+                .AddSingleton<IProcessHistory, ProcessHistory>()
+                .AddSingleton<INyTimesCovidService, NyTimesCovidService>();
             
             ConfigureConsole(config);
         }

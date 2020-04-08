@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using covid19.Services.DataProvider;
 using covid19.Services.Models;
 using Microsoft.Extensions.Options;
 using Octokit;
@@ -21,18 +22,19 @@ namespace covid19.Services.Services
     public class NyTimesCovidService : INyTimesCovidService
     {
         private readonly IOptions<AppSettings> _settings;
+        private readonly INyTimesCovidDataProvider _covidProvider;
         private IGitHubClient _gitHubClient;
         private List<NytimesCountyCovidRow> _nycoviddata;
         private string _nycoviddataraw;
         private ILogger _logger;
 
-        public NyTimesCovidService(IOptions<AppSettings> settings, ILogger logger)
+        public NyTimesCovidService(IOptions<AppSettings> settings, ILogger logger, INyTimesCovidDataProvider covidProvider)
         {
             _settings = settings;
+            _covidProvider = covidProvider;
             _logger = logger.ForContext<NyTimesCovidService>();
-            _nycoviddata = GetNyTimesCovidData();
-
-            _logger.Debug("Construction complete.");
+            covidProvider.Run(false);
+            _nycoviddata = covidProvider.ProcessedNytimesCountyCovidRows.ToList();
         }
 
         public List<NytimesCountyCovidRow> NyTimesCountyCovidData
@@ -50,9 +52,9 @@ namespace covid19.Services.Services
         /// Gets and parses NyTimes Covid data.
         /// </summary>
         /// <returns>A parsed list of NytimesCountyCovidRow</returns>
-        private List<NytimesCountyCovidRow> GetNyTimesCovidData()
+        private List<NytimesCountyCovidRow> ProcessNyTimesCovidData()
         {
-            var parsedData = ParseCountyCovidRows(GetNyTimesCovidRawData(_settings.Value.NyTimesCountyCovidUri));
+            var parsedData = ParseCountyCovidRows(GetNyTimesCovidRawData(_settings.Value.OctoKit.NyTimesCountyCovidUri));
             var enrichedData = EnrichPercentChangeCases(parsedData);
             return enrichedData.ToList();
         }
@@ -131,8 +133,6 @@ namespace covid19.Services.Services
 
             foreach (var covidRow in enrichedData)
             {
-                //Check to see that we're on the same county
-                //Check to see that we're on the same state
 
                 if (prevCounty != covidRow.County || prevState != covidRow.State)
                 {
