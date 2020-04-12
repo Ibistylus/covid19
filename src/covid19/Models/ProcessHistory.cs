@@ -1,9 +1,6 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
-using Newtonsoft.Json;
 using System.Text.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace covid19.Services.Models
 {
@@ -18,7 +15,7 @@ namespace covid19.Services.Models
 
     public class ProcessHistory : IProcessHistory
     {
-        string FILE_HISTORY_NAME = "fileHistory.json";
+        private readonly string FILE_HISTORY_NAME = "fileHistory.json";
 
         public ProcessHistory()
         {
@@ -33,7 +30,7 @@ namespace covid19.Services.Models
         {
             try
             {
-                string jsonString = JsonSerializer.Serialize(this);
+                var jsonString = JsonSerializer.Serialize(this);
                 File.WriteAllText(FILE_HISTORY_NAME, jsonString);
             }
             catch (Exception e)

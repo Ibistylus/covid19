@@ -1,25 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Security.Claims;
 using System.Threading.Tasks;
+using covid19.Services.DataProvider;
 using covid19.Services.Models;
 using covid19.Services.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Octokit;
-using System.Net.Http;
-using covid19.Services.DataProvider;
 using Serilog;
-using Serilog.Core;
 
 namespace covid19.Services
 {
-    class Program
+    internal class Program
     {
         public static async Task<int> Main(string[] args)
         {
@@ -28,9 +19,9 @@ namespace covid19.Services
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             // var nyTimesCovidService = serviceProvider.GetService<INyTimesCovidService>();
-            var nyTimesCovidDataProvider= serviceProvider.GetService<INyTimesCovidDataProvider>();
+            var nyTimesCovidDataProvider = serviceProvider.GetService<INyTimesCovidDataProvider>();
             nyTimesCovidDataProvider.Run(false);
-            
+
             //            var resultsDekalb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "dekalb");
             //            var resultsCobb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "cobb");
 
@@ -41,8 +32,8 @@ namespace covid19.Services
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile("appsettings.development.json", optional: true, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", true, true)
+                .AddJsonFile("appsettings.development.json", true, true)
                 .AddEnvironmentVariables("COVID_16")
                 .AddCommandLine(args)
                 .Build();
@@ -59,13 +50,13 @@ namespace covid19.Services
                 .AddSingleton<INyTimesCovidDataProvider, NyTimesCovidDataProvider>()
                 .AddSingleton<IProcessHistory, ProcessHistory>()
                 .AddSingleton<INyTimesCovidService, NyTimesCovidService>();
-            
+
             ConfigureConsole(config);
         }
 
         private static void ConfigureConsole(IConfigurationRoot configuration)
         {
-            System.Console.Title = configuration.GetSection("Configuration:ConsoleTitle").Value;
+            Console.Title = configuration.GetSection("Configuration:ConsoleTitle").Value;
         }
     }
 }

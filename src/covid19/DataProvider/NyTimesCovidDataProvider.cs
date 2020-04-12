@@ -1,42 +1,34 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
-using System.Text.Json;
 using covid19.Services.Models;
 using covid19.Services.Services;
 using CsvHelper;
 using Microsoft.Extensions.Options;
-using Octokit;
 using Serilog;
-using Serilog.Core;
 
 namespace covid19.Services.DataProvider
 {
     public interface INyTimesCovidDataProvider
     {
-        void Run(bool forcePull);
-
         IEnumerable<NytimesCountyCovidRow> ProcessedNytimesCountyCovidRows { get; }
+        void Run(bool forcePull);
     }
 
     public class NyTimesCovidDataProvider : INyTimesCovidDataProvider
     {
-        const string UNPARSED_DATA = "NyTimesCovidRawData.txt";
+        private const string UNPARSED_DATA = "NyTimesCovidRawData.txt";
         private const string PREPARED_DATA = "NyTimesPreparedCountyCovidData.csv";
+        private readonly IOctoKitGitHubClient _covidGitHubClient;
+        private readonly ILogger _logger;
 
         private readonly IOptions<AppSettings> _settings;
-        private readonly ILogger _logger;
-        private readonly IOctoKitGitHubClient _covidGitHubClient;
-        private IProcessHistory _processHistory;
-        private IEnumerable<NytimesCountyCovidRow> _preparedData;
-        private DateTime _covidThisRun;
         private DateTime _covidCountyDataThisLatestCheckin;
-        private IProcessHistory ProcessHistory { get; }
+        private DateTime _covidThisRun;
+        private readonly IProcessHistory _processHistory;
 
         public NyTimesCovidDataProvider(IOptions<AppSettings> settings, ILogger logger, IProcessHistory processHistory,
             IOctoKitGitHubClient covidGitHubClient)
@@ -49,10 +41,9 @@ namespace covid19.Services.DataProvider
             _covidCountyDataThisLatestCheckin = DateTime.Now;
         }
 
-        public IEnumerable<NytimesCountyCovidRow> ProcessedNytimesCountyCovidRows
-        {
-            get { return _preparedData; }
-        }
+        private IProcessHistory ProcessHistory { get; }
+
+        public IEnumerable<NytimesCountyCovidRow> ProcessedNytimesCountyCovidRows { get; private set; }
 
         public void Run(bool forcePull)
         {
@@ -64,29 +55,27 @@ namespace covid19.Services.DataProvider
             //    no - Pull file process
             // 2. Pull file
             //    check
-            
+
             var latestCheckinDate = _covidGitHubClient.GetLatestCheckinDateForCovidData().Result;
-            
-            if (_processHistory != null)
-            {
-                _processHistory.RetrieveHistory();
-            }
+
+            if (_processHistory != null) _processHistory.RetrieveHistory();
 
             if (forcePull || latestCheckinDate > _processHistory?.DateTimeLastRun)
             {
                 ProcessNewData(latestCheckinDate);
-                _logger.Debug(string.Format("New data pulled."));
+                _logger.Debug("New data pulled.");
             }
             else
             {
                 LoadProcessedData();
-                _logger.Debug(string.Format("Retrieved saved data with {0} rows.", _preparedData.Count().ToString()));
+                _logger.Debug(string.Format("Retrieved saved data with {0} rows.",
+                    ProcessedNytimesCountyCovidRows.Count().ToString()));
             }
         }
 
         private void ProcessNewData(DateTime latestCheckinDate)
         {
-            _preparedData = EnrichPercentChangeCases(
+            ProcessedNytimesCountyCovidRows = EnrichPercentChangeCases(
                 ParseCountyCovidRows(PullNyTimesCountyCovidData(_settings.Value.OctoKit.NyTimesCountyCovidUri)));
 
             SaveProcessedData();
@@ -129,15 +118,14 @@ namespace covid19.Services.DataProvider
                 using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                 {
                     var records = csv.GetRecords<NytimesCountyCovidRow>();
-                    _preparedData = records.ToList();
+                    ProcessedNytimesCountyCovidRows = records.ToList();
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                this.Run(true);
+                Run(true);
             }
-            
         }
 
         private void SaveProcessedData()
@@ -145,7 +133,7 @@ namespace covid19.Services.DataProvider
             using (var writer = new StreamWriter(PREPARED_DATA))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
-                csv.WriteRecords(_preparedData);
+                csv.WriteRecords(ProcessedNytimesCountyCovidRows);
             }
         }
 
@@ -153,7 +141,7 @@ namespace covid19.Services.DataProvider
         {
             var covidData = new List<NytimesCountyCovidRow>();
             var covidErrorData = new List<string>();
-            int errorRows = 0;
+            var errorRows = 0;
 
             foreach (var row in data)
             {
@@ -189,8 +177,8 @@ namespace covid19.Services.DataProvider
             decimal percentChange = 0;
             int? prevCases = 0;
             int? prevDeaths = 0;
-            string prevCounty = string.Empty;
-            string prevState = string.Empty;
+            var prevCounty = string.Empty;
+            var prevState = string.Empty;
 
             var enrichedData = parsedData
                 .OrderBy(o => o.State)
@@ -208,8 +196,8 @@ namespace covid19.Services.DataProvider
                     prevCases = covidRow.Cases;
                     prevDeaths = covidRow.Deaths;
 
-                    covidRow.CasesPercentChange = Decimal.Zero;
-                    covidRow.DeathPercentChange = Decimal.Zero;
+                    covidRow.CasesPercentChange = decimal.Zero;
+                    covidRow.DeathPercentChange = decimal.Zero;
 
                     continue;
                 }
@@ -217,24 +205,16 @@ namespace covid19.Services.DataProvider
                 try
                 {
                     if (prevDeaths > 0)
-                    {
                         covidRow.DeathPercentChange =
-                            CovidCountyAggregator.PercenChange((decimal) prevDeaths, (decimal) covidRow.Deaths);
-                    }
+                            CovidCountyAggregator.PercentChange((decimal) prevDeaths, (decimal) covidRow.Deaths);
                     else
-                    {
-                        covidRow.DeathPercentChange = Decimal.Zero;
-                    }
+                        covidRow.DeathPercentChange = decimal.Zero;
 
                     if (prevCases > 0)
-                    {
                         covidRow.CasesPercentChange =
-                            CovidCountyAggregator.PercenChange((decimal) prevCases, (decimal) covidRow.Cases);
-                    }
+                            CovidCountyAggregator.PercentChange((decimal) prevCases, (decimal) covidRow.Cases);
                     else
-                    {
-                        covidRow.CasesPercentChange = Decimal.Zero;
-                    }
+                        covidRow.CasesPercentChange = decimal.Zero;
 
                     prevDeaths = covidRow.Deaths;
                     prevCases = covidRow.Cases;

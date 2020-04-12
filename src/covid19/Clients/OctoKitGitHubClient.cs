@@ -22,9 +22,9 @@ namespace covid19.Services.Services
 
     public class OctoKitGitHubClient : IOctoKitGitHubClient
     {
-        private IGitHubClient _gitHubClient;
-        private IOptions<AppSettings> _settings;
+        private readonly IGitHubClient _gitHubClient;
         private ILogger _logger;
+        private readonly IOptions<AppSettings> _settings;
 
         public OctoKitGitHubClient(IOptions<AppSettings> settings, ILogger logger)
         {
@@ -56,9 +56,9 @@ namespace covid19.Services.Services
         {
             var repo = _gitHubClient.Repository.Get(_settings.Value.OctoKit.RepoOwner,
                 _settings.Value.OctoKit.RepoName).Result;
-            
+
             var request = new CommitRequest
-                {Path = _settings.Value.OctoKit.NyTimesCountyCovidPath , Sha = _settings.Value.OctoKit.RepoBranch};
+                {Path = _settings.Value.OctoKit.NyTimesCountyCovidPath, Sha = _settings.Value.OctoKit.RepoBranch};
 
             var commitsForFile = await _gitHubClient.Repository.Commit.GetAll(repo.Id, request);
             var mostRecentCommit = commitsForFile[0];
