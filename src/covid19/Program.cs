@@ -31,13 +31,8 @@ namespace covid19.Services
             var nyTimesCovidDataProvider= serviceProvider.GetService<INyTimesCovidDataProvider>();
             nyTimesCovidDataProvider.Run(false);
             
-
-            
             //            var resultsDekalb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "dekalb");
             //            var resultsCobb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "cobb");
-
-            //            var gitHubClient = serviceProvider.GetService<IOctoKitGitHubClient>();
-            //            var dlurl = gitHubClient.GetLatestCheckinDateForCovidData().Result;
 
             return 1;
         }
