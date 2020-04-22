@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using covid19.Services.DataProvider;
 using covid19.Services.Models;
@@ -18,13 +20,22 @@ namespace covid19.Services
             ConfigureServices(serviceCollection, args);
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
-            // var nyTimesCovidService = serviceProvider.GetService<INyTimesCovidService>();
+            var nyTimesCovidService = serviceProvider.GetService<INyTimesCovidService>();
             var nyTimesCovidDataProvider = serviceProvider.GetService<INyTimesCovidDataProvider>();
             nyTimesCovidDataProvider.Run(false);
-
-            //            var resultsDekalb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "dekalb");
+            var resultsDekalb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "dekalb");
             //            var resultsCobb = nyTimesCovidService.GetNyTimesCountyCovidDataByCounty("georgia", "cobb");
 
+            foreach (var covidRow in resultsDekalb)
+            {
+                StringBuilder sbResults = new StringBuilder();
+
+                sbResults.Append(covidRow.Date.ToString("yyyy-MM-dd"));
+                sbResults.Append(" ");
+                sbResults.Append(covidRow.CasesPercentChange?.ToString( "#.##" ) + "%");
+                
+                Console.WriteLine(sbResults);
+            }
             return 1;
         }
 
