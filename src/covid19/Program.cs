@@ -41,6 +41,8 @@ namespace covid19.Services
 
         private static void ConfigureServices(IServiceCollection serviceCollection, string[] args)
         {
+            Console.WriteLine(Directory.GetCurrentDirectory());
+            
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", true, true)
